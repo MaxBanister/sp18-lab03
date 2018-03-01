@@ -5,6 +5,7 @@ import "./AuctionInterface.sol";
 /** @title GoodAuction */
 contract GoodAuction is AuctionInterface {
 
+	event Debug(string msg);
 	/* New data structure, keeps track of refunds owed */
 	mapping(address => uint) refunds;
 
@@ -14,7 +15,16 @@ contract GoodAuction is AuctionInterface {
 		reassignment. Must return false on failure and 
 		allow people to retrieve their funds  */
 	function bid() payable external returns(bool) {
-		// YOUR CODE HERE
+		if (msg.value > highestBid) {
+			refunds[highestBidder] += highestBid;
+			highestBidder = msg.sender;
+			highestBid = msg.value;
+			return true;
+		}
+		else {
+			msg.sender.transfer(msg.value);
+			return false;
+		}
 	}
 
 	/*  Implement withdraw function to complete new 
@@ -22,7 +32,9 @@ contract GoodAuction is AuctionInterface {
 	    return of owed funds and false on failure
 	    or no funds owed.  */
 	function withdrawRefund() external returns(bool) {
-		// YOUR CODE HERE
+		uint refund = refunds[msg.sender];
+		refunds[msg.sender] = 0;
+		msg.sender.transfer(refund);
 	}
 
 	/*  Allow users to check the amount they are owed
@@ -36,7 +48,8 @@ contract GoodAuction is AuctionInterface {
 	/* 	Consider implementing this modifier
 		and applying it to the reduceBid function 
 		you fill in below. */
-	modifier canReduce() {
+	modifier canReduce {
+		require(msg.sender == highestBidder);
 		_;
 	}
 
@@ -44,7 +57,16 @@ contract GoodAuction is AuctionInterface {
 	/*  Rewrite reduceBid from BadAuction to fix
 		the security vulnerabilities. Should allow the
 		current highest bidder only to reduce their bid amount */
-	function reduceBid() external {}
+	function reduceBid() external {
+		if (msg.sender == highestBidder) {
+		    if (highestBid >= 0) {
+		        highestBid = highestBid - 1;
+		        require(highestBidder.send(1));
+		    } else {
+		    	revert();
+		    }
+		}
+	}
 
 
 	/* 	Remember this fallback function
@@ -55,7 +77,7 @@ contract GoodAuction is AuctionInterface {
 		How do we send people their money back?  */
 
 	function () payable {
-		// YOUR CODE HERE
+		revert();
 	}
 
 }
